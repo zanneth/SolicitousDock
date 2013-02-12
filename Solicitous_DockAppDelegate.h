@@ -9,15 +9,13 @@
 #import <Cocoa/Cocoa.h>
 #import "PreferencesWindowController.h"
 
-@interface Solicitous_DockAppDelegate : NSObject <NSApplicationDelegate> {
-    BOOL dockHidden;
-    int toggleAppsOpenCount;
-    
-    NSMutableArray *toggleApps;
-    PreferencesWindowController *preferencesWindow;
-    
-    NSStatusItem *statItem;
-}
+extern NSString * const SDPreferencesDefaultsExistKey;
+extern NSString * const SDPreferencesToggleAppsKey;
+extern NSString * const SDPreferencesHideShowWhenSwitchingKey;
+extern NSString * const SDApplicationBundleIdentifierKey;
+extern NSString * const SDApplicationNameKey;
+
+@interface Solicitous_DockAppDelegate : NSObject <NSApplicationDelegate>
 
 @property (nonatomic, assign) BOOL dockHidden;
 @property (nonatomic, assign) int toggleAppsOpenCount;

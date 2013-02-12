@@ -8,12 +8,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-
-@interface PreferencesWindowController : NSWindowController<NSTableViewDelegate, NSTableViewDataSource> {
-    IBOutlet NSButton *hideShowCheckbox;
-    IBOutlet NSTableView *appsTableView;
-    IBOutlet NSButton *removeRowButton;
-}
+@interface PreferencesWindowController : NSWindowController<NSTableViewDelegate, NSTableViewDataSource>
 
 @property (nonatomic, retain) IBOutlet NSButton *hideShowCheckbox;
 @property (nonatomic, retain) IBOutlet NSTableView *appsTableView;
