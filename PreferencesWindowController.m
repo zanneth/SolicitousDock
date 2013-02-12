@@ -62,13 +62,25 @@ NSMutableArray *activeApps;
     [filePanel setCanChooseFiles:YES];
     [filePanel setCanChooseDirectories:NO];
     
-    [filePanel beginSheetForDirectory:nil
-                                 file:nil
-                                types:[NSArray arrayWithObject:@"app"]
-                       modalForWindow:[self window]
-                        modalDelegate:self
-                       didEndSelector:@selector(openPanelDidEnd:returnCode:contextInfo:)
-                          contextInfo:NULL];
+    [filePanel beginSheetModalForWindow:[self window] completionHandler:^(NSInteger result) {
+        if (result == NSOKButton) {
+            NSArray *selectedItems = [filePanel URLs];
+            NSURL *selectedItem = [selectedItems objectAtIndex:0];
+            
+            NSBundle *appBundle = [NSBundle bundleWithURL:selectedItem];
+            NSString *bundleIdentifier = [appBundle bundleIdentifier];
+            NSString *appName = [[appBundle infoDictionary] objectForKey:@"CFBundleName"];
+            
+            [activeApps addObject:[NSDictionary dictionaryWithObjects:[NSArray arrayWithObjects:appName, bundleIdentifier, nil]
+                                                              forKeys:[NSArray arrayWithObjects:@"Application Name", @"Bundle Identifier", nil]]];
+            [appsTableView reloadData];
+            [self saveChangesToFile];
+            
+            if (![removeRowButton isEnabled]) {
+                [removeRowButton setEnabled:YES];
+            }
+        }
+    }];
 }
 
 - (IBAction)removeRowButtonAction:(id)sender {

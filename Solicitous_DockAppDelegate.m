@@ -7,8 +7,9 @@
 //
 
 #import "Solicitous_DockAppDelegate.h"
+#import <ApplicationServices/ApplicationServices.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+extern OSStatus CoreDockSetAutoHideEnabled(Boolean isEnabled);
 
 @implementation Solicitous_DockAppDelegate
 @synthesize dockHidden, toggleAppsOpenCount;
@@ -25,7 +26,7 @@
 - (void)preferencesAction:(id)sender {
     if (!preferencesWindow)
         preferencesWindow = [[PreferencesWindowController alloc] initWithWindowNibName:@"PreferencesWindowController"];
-
+    
     [[preferencesWindow window] makeKeyAndOrderFront:self];
     [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
 }
@@ -34,24 +35,18 @@
     [[NSApplication sharedApplication] terminate:sender];
 }
 
+- (void)debug_toggleAction:(id)sender {
+    [self toggleShowDock];
+}
+
 #pragma mark -
 
 
 #pragma mark Helper Methods
 
 - (void)toggleShowDock {
-    /*
-        If there's a better way to do this, please email me!
-        charles@magahern.com
-    */
-    
     dockHidden = !dockHidden;
-    CGPostKeyboardEvent(0, (CGKeyCode) 55, true);
-    CGPostKeyboardEvent(0, (CGKeyCode) 58, true);
-    CGPostKeyboardEvent(0, (CGKeyCode) 2, true);
-    CGPostKeyboardEvent(0, (CGKeyCode) 2, false);
-    CGPostKeyboardEvent(0, (CGKeyCode) 58, false);
-    CGPostKeyboardEvent(0, (CGKeyCode) 55, false);
+    CoreDockSetAutoHideEnabled(dockHidden);
 }
 
 - (BOOL)applicationBundleIdentifierIsAToggle:(NSString *)bundleIdentifier {
@@ -90,6 +85,11 @@
     [preferencesItem setTarget:self];
     NSMenuItem *quitItem = [menu addItemWithTitle:@"Quit" action:@selector(quitAction:) keyEquivalent:@""];
     [quitItem setTarget:self];
+    
+#ifdef DEBUG_ENABLED
+    NSMenuItem *toggleItem = [menu addItemWithTitle:@"DEBUG_ToggleShow" action:@selector(debug_toggleAction:) keyEquivalent:@""];
+    [toggleItem setTarget:self];
+#endif
     
     [statItem setMenu:menu];
     [menu release];
