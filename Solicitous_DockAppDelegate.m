@@ -12,6 +12,7 @@
 NSString * const SDPreferencesDefaultsExistKey         = @"SDPreferencesDefaultsExistKey";
 NSString * const SDPreferencesToggleAppsKey            = @"SDPreferencesToggleAppsKey";
 NSString * const SDPreferencesHideShowWhenSwitchingKey = @"SDPreferencesHideShowWhenSwitchingKey";
+NSString * const SDPreferencesIconStyleKey             = @"SDPreferencesIconStyleKey";
 NSString * const SDApplicationBundleIdentifierKey      = @"SDApplicationBundleIdentifierKey";
 NSString * const SDApplicationNameKey                  = @"SDApplicationNameKey";
 
@@ -42,6 +43,7 @@ extern OSStatus CoreDockSetAutoHideEnabled(Boolean enabled);
 - (void)preferencesAction:(id)sender {
     if (!_preferencesWindow) {
         _preferencesWindow = [[PreferencesWindowController alloc] initWithWindowNibName:@"PreferencesWindowController"];
+        [_preferencesWindow setDelegate:self];
     }
     
     [[_preferencesWindow window] makeKeyAndOrderFront:self];
@@ -86,11 +88,38 @@ extern OSStatus CoreDockSetAutoHideEnabled(Boolean enabled);
                                                                name:NSWorkspaceDidActivateApplicationNotification object:nil];
 }
 
+- (NSString *)_menuIconImageNameForIconStyle:(SDMenuIconStyle)iconStyle {
+    static NSString *const baseName = @"menu-icon";
+    static NSString *const blackAndWhiteStyle = @"gray";
+    static NSString *const colorStyle = @"color";
+    
+    NSString *styleName = nil;
+    switch (iconStyle) {
+        case SDMenuIconStyleColor:
+            styleName = colorStyle;
+            break;
+        case SDMenuIconStyleBlackAndWhite:
+        default:
+            styleName = blackAndWhiteStyle;
+            break;
+    }
+    
+    return [NSString stringWithFormat:@"%@_%@", baseName, styleName];
+}
+
+- (void)_updateStatItemIconImage {
+    if (!_statItem) {
+        _statItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
+        [_statItem setToolTip:@"Solicitous Dock"];
+        [_statItem setHighlightMode:YES];
+    }
+    
+    SDMenuIconStyle currentIconStyle = [[NSUserDefaults standardUserDefaults] integerForKey:SDPreferencesIconStyleKey];
+    [_statItem setImage:[NSImage imageNamed:[self _menuIconImageNameForIconStyle:currentIconStyle]]];
+}
+
 - (void)addStatusBarItems {
-    _statItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
-    [_statItem setToolTip:@"Solicitous Dock"];
-    [_statItem setImage:[NSImage imageNamed:@"menu-icon.png"]];
-    [_statItem setHighlightMode:YES];
+    [self _updateStatItemIconImage];
     
     NSMenu *menu = [[NSMenu allocWithZone:[NSMenu menuZone]] init];
     
@@ -184,6 +213,14 @@ extern OSStatus CoreDockSetAutoHideEnabled(Boolean enabled);
         [[NSUserDefaults standardUserDefaults] setObject:_toggleApps forKey:SDPreferencesToggleAppsKey];
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:SDPreferencesHideShowWhenSwitchingKey];
         [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+}
+
+#pragma mark - Preferences Window callback methods
+
+- (void)preferencesDidChangeValue:(id)value forKey:(NSString *)key {
+    if ([key isEqualToString:SDPreferencesIconStyleKey]) {
+        [self _updateStatItemIconImage];
     }
 }
 

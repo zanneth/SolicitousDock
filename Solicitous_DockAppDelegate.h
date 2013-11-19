@@ -12,10 +12,16 @@
 extern NSString * const SDPreferencesDefaultsExistKey;
 extern NSString * const SDPreferencesToggleAppsKey;
 extern NSString * const SDPreferencesHideShowWhenSwitchingKey;
+extern NSString * const SDPreferencesIconStyleKey;
 extern NSString * const SDApplicationBundleIdentifierKey;
 extern NSString * const SDApplicationNameKey;
 
-@interface Solicitous_DockAppDelegate : NSObject <NSApplicationDelegate>
+typedef NS_ENUM(NSUInteger, SDMenuIconStyle) {
+    SDMenuIconStyleBlackAndWhite = 0, // default
+    SDMenuIconStyleColor,
+};
+
+@interface Solicitous_DockAppDelegate : NSObject <NSApplicationDelegate, PreferencesWindowDelegate>
 
 @property (nonatomic, assign) BOOL dockHidden;
 @property (nonatomic, assign) int toggleAppsOpenCount;
