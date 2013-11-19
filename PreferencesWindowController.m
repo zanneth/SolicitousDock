@@ -22,6 +22,7 @@
 @synthesize hideShowCheckbox = _hideShowCheckbox;
 @synthesize appsTableView = _appsTableView;
 @synthesize removeRowButton = _removeRowButton;
+@synthesize iconStylePopUpButton = _iconStylePopUpButton;
 
 - (void)awakeFromNib {
     [super awakeFromNib];
@@ -30,7 +31,7 @@
     [_hideShowCheckbox setState:hideShowValue];
     
     Solicitous_DockAppDelegate *del = (Solicitous_DockAppDelegate *) [[NSApplication sharedApplication] delegate];
-    _activeApps = [del toggleApps];
+    _activeApps = [[del toggleApps] retain];
     
     if ([_activeApps count] == 0) {
         [_removeRowButton setEnabled:NO];
@@ -114,6 +115,12 @@
 }
 
 - (void)dealloc {
+    [_hideShowCheckbox release];
+    [_appsTableView release];
+    [_removeRowButton release];
+    [_iconStylePopUpButton release];
+    
+    [_activeApps release];
     
     [super dealloc];
 }
