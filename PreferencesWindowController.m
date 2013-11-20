@@ -13,13 +13,16 @@
     NSButton *_hideShowCheckbox;
     NSTableView *_appsTableView;
     NSButton *_removeRowButton;
+    NSPopUpButton *_iconStylePopUpButton;
     
     NSMutableArray *_activeApps;
+    SDMenuIconStyle _currentIconStyle;
 }
 
 @synthesize hideShowCheckbox = _hideShowCheckbox;
 @synthesize appsTableView = _appsTableView;
 @synthesize removeRowButton = _removeRowButton;
+@synthesize iconStylePopUpButton = _iconStylePopUpButton;
 
 - (void)awakeFromNib {
     [super awakeFromNib];
@@ -28,16 +31,20 @@
     [_hideShowCheckbox setState:hideShowValue];
     
     Solicitous_DockAppDelegate *del = (Solicitous_DockAppDelegate *) [[NSApplication sharedApplication] delegate];
-    _activeApps = [del toggleApps];
+    _activeApps = [[del toggleApps] retain];
     
     if ([_activeApps count] == 0) {
         [_removeRowButton setEnabled:NO];
     }
     
+    _currentIconStyle = [[NSUserDefaults standardUserDefaults] integerForKey:SDPreferencesIconStyleKey];
+    [_iconStylePopUpButton selectItemAtIndex:_currentIconStyle];
+    
     [[self window] center];
 }
 
 - (void)saveChangesToFile {
+    [[NSUserDefaults standardUserDefaults] setInteger:_currentIconStyle forKey:SDPreferencesIconStyleKey];
     [[NSUserDefaults standardUserDefaults] setObject:_activeApps forKey:SDPreferencesToggleAppsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
@@ -45,6 +52,8 @@
 - (IBAction)hideShowCheckboxAction:(id)sender {
     [[NSUserDefaults standardUserDefaults] setBool:[_hideShowCheckbox state] forKey:SDPreferencesHideShowWhenSwitchingKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    [_delegate preferencesDidChangeValue:@([_hideShowCheckbox state]) forKey:SDPreferencesHideShowWhenSwitchingKey];
 }
 
 - (IBAction)addRowButtonAction:(id)sender {
@@ -70,6 +79,8 @@
             if (![_removeRowButton isEnabled]) {
                 [_removeRowButton setEnabled:YES];
             }
+            
+            [_delegate preferencesDidChangeValue:_activeApps forKey:SDPreferencesToggleAppsKey];
         }
     }];
 }
@@ -84,6 +95,15 @@
     if ([_activeApps count] == 0) {
         [_removeRowButton setEnabled:NO];
     }
+    
+    [_delegate preferencesDidChangeValue:_activeApps forKey:SDPreferencesToggleAppsKey];
+}
+
+- (IBAction)menuIconStyleChangedAction:(id)sender {
+    _currentIconStyle = [_iconStylePopUpButton indexOfSelectedItem];
+    [self saveChangesToFile];
+    
+    [_delegate preferencesDidChangeValue:@(_currentIconStyle) forKey:SDPreferencesIconStyleKey];
 }
 
 - (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)aTableColumn row:(NSInteger)rowIndex {
@@ -95,6 +115,12 @@
 }
 
 - (void)dealloc {
+    [_hideShowCheckbox release];
+    [_appsTableView release];
+    [_removeRowButton release];
+    [_iconStylePopUpButton release];
+    
+    [_activeApps release];
     
     [super dealloc];
 }
