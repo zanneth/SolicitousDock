@@ -8,230 +8,174 @@
 
 #import "Solicitous_DockAppDelegate.h"
 #import <ApplicationServices/ApplicationServices.h>
+#import <objc/message.h>
 
-NSString * const SDPreferencesDefaultsExistKey         = @"SDPreferencesDefaultsExistKey";
-NSString * const SDPreferencesToggleAppsKey            = @"SDPreferencesToggleAppsKey";
-NSString * const SDPreferencesHideShowWhenSwitchingKey = @"SDPreferencesHideShowWhenSwitchingKey";
-NSString * const SDPreferencesIconStyleKey             = @"SDPreferencesIconStyleKey";
-NSString * const SDApplicationBundleIdentifierKey      = @"SDApplicationBundleIdentifierKey";
-NSString * const SDApplicationNameKey                  = @"SDApplicationNameKey";
+
+int main(int argc, char *argv[]) { return NSApplicationMain(argc,  (const char **) argv); }
+
+NSString  * const SDPreferencesHideShowWhenSwitchingKey = @"SDPreferencesHideShowWhenSwitchingKey",
+          * const SDApplicationBundleIdentifierKey      = @"SDApplicationBundleIdentifierKey",
+          * const SDPreferencesDefaultsExistKey         = @"SDPreferencesDefaultsExistKey",
+          * const SDPreferencesToggleAppsKey            = @"SDPreferencesToggleAppsKey",
+          * const SDPreferencesIconStyleKey             = @"SDPreferencesIconStyleKey",
+          * const SDApplicationNameKey                  = @"SDApplicationNameKey";
 
 // private functions in ApplicationServices that alter dock autohide state
-extern Boolean CoreDockGetAutoHideEnabled();
-extern OSStatus CoreDockSetAutoHideEnabled(Boolean enabled);
+extern  Boolean CoreDockGetAutoHideEnabled();
+extern OSStatus CoreDockSetAutoHideEnabled(Boolean);
 
-@implementation Solicitous_DockAppDelegate {
-    BOOL    _dockHidden;
-    int     _toggleAppsOpenCount;
-    
-    NSMutableArray              *_toggleApps;
-    PreferencesWindowController *_preferencesWindow;
-    NSStatusItem                *_statItem;
-}
-@synthesize dockHidden = _dockHidden;
-@synthesize toggleAppsOpenCount = _toggleAppsOpenCount;
-@synthesize toggleApps = _toggleApps;
-@synthesize preferencesWindow = _preferencesWindow;
+@implementation Solicitous_DockAppDelegate { NSStatusItem *_statItem; }
+
+@synthesize dockHidden = _dockHidden, toggleAppsOpenCount = _toggleAppsOpenCount,
+            toggleApps = _toggleApps, preferencesWindow   = _preferencesWindow;
 
 #pragma mark - Menu Actions
 
 - (void)aboutAction:(id)sender {
-    [[NSApplication sharedApplication] orderFrontStandardAboutPanel:sender];
-    [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
+
+  [NSApplication.sharedApplication orderFrontStandardAboutPanel:sender];
+  [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
 }
 
 - (void)preferencesAction:(id)sender {
-    if (!_preferencesWindow) {
-        _preferencesWindow = [[PreferencesWindowController alloc] initWithWindowNibName:@"PreferencesWindowController"];
-        [_preferencesWindow setDelegate:self];
-    }
-    
-    [[_preferencesWindow window] makeKeyAndOrderFront:self];
-    [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
+
+  if (!_preferencesWindow)
+    [_preferencesWindow = [PreferencesWindowController.alloc initWithWindowNibName:@"PreferencesWindowController"] setDelegate:self];
+
+  [_preferencesWindow.window makeKeyAndOrderFront:self];
+  [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
 }
 
-- (void)quitAction:(id)sender {
-    [[NSApplication sharedApplication] terminate:sender];
-}
+- (void)quitAction:(id)sender { [NSApplication.sharedApplication terminate:sender]; }
 
-- (void)debug_toggleAction:(id)sender {
-    [self toggleShowDock];
-}
+- (void)debug_toggleAction:(id)sender { [self toggleShowDock]; }
 
 #pragma mark - Helper Methods
 
-- (void)toggleShowDock {
-    _dockHidden = !_dockHidden;
-    CoreDockSetAutoHideEnabled(_dockHidden);
-}
+- (void)toggleShowDock {  _dockHidden = !_dockHidden;  CoreDockSetAutoHideEnabled(_dockHidden); }
 
 - (BOOL)applicationBundleIdentifierIsAToggle:(NSString *)bundleIdentifier {
-	BOOL willHide = NO;
-    for (NSDictionary *app in _toggleApps) {
-        NSString *toggleIdentifier = [app objectForKey:SDApplicationBundleIdentifierKey];
-        willHide |= [bundleIdentifier isEqualToString:toggleIdentifier];
-    }
-	return willHide;
+
+  return [[_toggleApps valueForKey:SDApplicationBundleIdentifierKey] containsObject:bundleIdentifier];
 }
 
 - (void)addWorkspaceObservers {
-    [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
-														   selector:@selector(workspaceApplicationDidLaunch:)
-															   name:NSWorkspaceWillLaunchApplicationNotification object:nil];
-    
-    [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
-                                                           selector:@selector(workspaceApplicationDidQuit:)
-                                                               name:NSWorkspaceDidTerminateApplicationNotification object:nil];
-	
-	[[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self
-                                                           selector:@selector(workspaceApplicationDidBecomeActive:)
-                                                               name:NSWorkspaceDidActivateApplicationNotification object:nil];
-}
 
+  [@{ @"workspaceApplicationDidLaunch:"       : NSWorkspaceWillLaunchApplicationNotification,
+      @"workspaceApplicationDidQuit:"         : NSWorkspaceDidTerminateApplicationNotification,
+      @"workspaceApplicationDidBecomeActive:" : NSWorkspaceDidActivateApplicationNotification } enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+
+        [NSWorkspace.sharedWorkspace.notificationCenter addObserver:self selector:NSSelectorFromString(key)
+                                                               name:obj    object:nil];
+      }];
+}
 - (NSString *)_menuIconImageNameForIconStyle:(SDMenuIconStyle)iconStyle {
-    static NSString *const baseName = @"menu-icon";
-    static NSString *const blackAndWhiteStyle = @"gray";
-    static NSString *const colorStyle = @"color";
-    
-    NSString *styleName = nil;
-    switch (iconStyle) {
-        case SDMenuIconStyleColor:
-            styleName = colorStyle;
-            break;
-        case SDMenuIconStyleBlackAndWhite:
-        default:
-            styleName = blackAndWhiteStyle;
-            break;
-    }
-    
-    return [NSString stringWithFormat:@"%@_%@", baseName, styleName];
+
+  static NSString *const baseName = @"menu-icon", *const blackAndWhiteStyle = @"gray", *const colorStyle = @"color";
+
+  NSString *styleName = iconStyle == SDMenuIconStyleColor         ? colorStyle :
+                        iconStyle == SDMenuIconStyleBlackAndWhite ? blackAndWhiteStyle : nil;
+
+  return [NSString stringWithFormat:@"%@_%@", baseName, styleName];
 }
 
 - (void)_updateStatItemIconImage {
-    if (!_statItem) {
-        _statItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
-        [_statItem setToolTip:@"Solicitous Dock"];
-        [_statItem setHighlightMode:YES];
-    }
-    
-    SDMenuIconStyle currentIconStyle = [[NSUserDefaults standardUserDefaults] integerForKey:SDPreferencesIconStyleKey];
-    [_statItem setImage:[NSImage imageNamed:[self _menuIconImageNameForIconStyle:currentIconStyle]]];
+
+  if (!_statItem) {
+    _statItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
+    [_statItem setToolTip:@"Solicitous Dock"];
+    [_statItem setHighlightMode:YES];
+  }
+
+  SDMenuIconStyle currentIconStyle = [NSUSERDEFS integerForKey:SDPreferencesIconStyleKey];
+  [_statItem setImage:[NSImage imageNamed:[self _menuIconImageNameForIconStyle:currentIconStyle]]];
 }
 
 - (void)addStatusBarItems {
-    [self _updateStatItemIconImage];
-    
-    NSMenu *menu = [[NSMenu allocWithZone:[NSMenu menuZone]] init];
-    
-    NSMenuItem *aboutItem = [menu addItemWithTitle:@"About Solicitous Dock" action:@selector(aboutAction:) keyEquivalent:@""];
-    [aboutItem setTarget:self];
-    [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *preferencesItem = [menu addItemWithTitle:@"Preferences..." action:@selector(preferencesAction:) keyEquivalent:@""];
-    [preferencesItem setTarget:self];
-    NSMenuItem *quitItem = [menu addItemWithTitle:@"Quit" action:@selector(quitAction:) keyEquivalent:@""];
-    [quitItem setTarget:self];
-    
+  [self _updateStatItemIconImage];
+
+  NSMenu *menu = [NSMenu allocWithZone:[NSMenu menuZone]].init;
+  NSMenuItem *aboutItem = [menu addItemWithTitle:@"About Solicitous Dock" action:@selector(aboutAction:) keyEquivalent:@""];
+  [menu addItem:NSMenuItem.separatorItem];
+  NSMenuItem *preferencesItem = [menu addItemWithTitle:@"Preferences..." action:@selector(preferencesAction:) keyEquivalent:@""];
+  NSMenuItem *quitItem = [menu addItemWithTitle:@"Quit" action:@selector(quitAction:) keyEquivalent:@""];
+
+  aboutItem.target = preferencesItem.target = quitItem.target = self;
+
 #ifdef DEBUG_ENABLED
-    NSMenuItem *toggleItem = [menu addItemWithTitle:@"DEBUG_ToggleShow" action:@selector(debug_toggleAction:) keyEquivalent:@""];
-    [toggleItem setTarget:self];
+  NSMenuItem *toggleItem = [menu addItemWithTitle:@"DEBUG_ToggleShow" action:@selector(debug_toggleAction:) keyEquivalent:@""];
+  [toggleItem setTarget:self];
 #endif
-    
-    [_statItem setMenu:menu];
-    [menu release];
+
+  [_statItem setMenu:menu];
 }
 
 #pragma mark - Workspace Notification Delegate Methods
 
 - (void)workspaceApplicationDidLaunch:(id)sender {
-    NSNotification *notification = (NSNotification *) sender;
-    NSString *identifier = [[notification userInfo] objectForKey:@"NSApplicationBundleIdentifier"];
-    
-    if ([self applicationBundleIdentifierIsAToggle:identifier]) {
-        if (!_dockHidden) {
-            [self toggleShowDock];
-        }
-        _toggleAppsOpenCount++;
-    }
+
+  NSString *identifier = ((NSNotification*)sender).userInfo[@"NSApplicationBundleIdentifier"];
+
+  if (![self applicationBundleIdentifierIsAToggle:identifier]) return;
+  if (!_dockHidden)[self toggleShowDock];
+  _toggleAppsOpenCount++;
 }
 
 - (void)workspaceApplicationDidQuit:(id)sender {
-    NSNotification *notification = (NSNotification *) sender;
-    NSString *identifier = [[notification userInfo] objectForKey:@"NSApplicationBundleIdentifier"];
-    
-    if ([self applicationBundleIdentifierIsAToggle:identifier]) {
-        _toggleAppsOpenCount--;
-    }
-    
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:SDPreferencesHideShowWhenSwitchingKey]) {
-        if ([self applicationBundleIdentifierIsAToggle:identifier] && _dockHidden && _toggleAppsOpenCount == 0) {
-            [self toggleShowDock];
-        }
-    }
+
+  NSString *identifier = (((NSNotification*)sender).userInfo)[@"NSApplicationBundleIdentifier"];
+
+  if ([self applicationBundleIdentifierIsAToggle:identifier]) _toggleAppsOpenCount--;
+
+  if (![NSUSERDEFS boolForKey:SDPreferencesHideShowWhenSwitchingKey] &&
+      [self applicationBundleIdentifierIsAToggle:identifier] && _dockHidden && _toggleAppsOpenCount == 0)
+    [self toggleShowDock];
 }
 
 - (void)workspaceApplicationDidBecomeActive:(id)sender {
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:SDPreferencesHideShowWhenSwitchingKey]) {
-        NSNotification *notification = (NSNotification *) sender;
-        NSString *identifier = [[[notification userInfo] objectForKey:@"NSWorkspaceApplicationKey"] bundleIdentifier];
-        
-        if ([self applicationBundleIdentifierIsAToggle:identifier]) {
-            if (!_dockHidden) {
-                [self toggleShowDock];
-            }
-        } else {
-            if (_dockHidden) {
-                [self toggleShowDock];
-            }
-        }
-    }
+
+  if (![NSUSERDEFS boolForKey:SDPreferencesHideShowWhenSwitchingKey]) return;
+
+  NSString *identifier = [((NSNotification*)sender).userInfo[@"NSWorkspaceApplicationKey"] bundleIdentifier];
+
+  [self applicationBundleIdentifierIsAToggle:identifier] && !_dockHidden ? [self toggleShowDock] :
+  _dockHidden ? [self toggleShowDock] : nil;
 }
 
 #pragma mark - Initializer
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-    NSArray *settings = [[NSUserDefaults standardUserDefaults] objectForKey:SDPreferencesToggleAppsKey];
-    if (settings != nil) {
-        _toggleApps = [[NSMutableArray alloc] initWithArray:settings];
-    } else {
-        _toggleApps = [[NSMutableArray alloc] init];
-    }
-    
-    _dockHidden = CoreDockGetAutoHideEnabled();
-    
-    _toggleAppsOpenCount = 0;
-    for (NSRunningApplication *app in [[NSWorkspace sharedWorkspace] runningApplications]) {
-        if ([self applicationBundleIdentifierIsAToggle:[app bundleIdentifier]]) {
-            _toggleAppsOpenCount++;
-        }
-    }
-    
-    [self addWorkspaceObservers];
-    [self addStatusBarItems];
-	
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:SDPreferencesDefaultsExistKey]) {
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:SDPreferencesDefaultsExistKey];
-        [[NSUserDefaults standardUserDefaults] setObject:_toggleApps forKey:SDPreferencesToggleAppsKey];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:SDPreferencesHideShowWhenSwitchingKey];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-    }
+
+  NSArray *settings = [NSUSERDEFS objectForKey:SDPreferencesToggleAppsKey];
+
+  _toggleApps          = settings ? settings.mutableCopy : @[].mutableCopy;
+  _dockHidden          = CoreDockGetAutoHideEnabled();
+  _toggleAppsOpenCount = 0;
+
+  [NSWorkspace.sharedWorkspace.runningApplications enumerateObjectsUsingBlock:^(NSRunningApplication *app, NSUInteger idx, BOOL *stop) {
+    if ([self applicationBundleIdentifierIsAToggle:[app bundleIdentifier]])
+      _toggleAppsOpenCount++;
+  }];
+
+  [self addWorkspaceObservers];  [self addStatusBarItems];
+
+  if ([NSUSERDEFS boolForKey:SDPreferencesDefaultsExistKey]) return;
+
+  [@{ SDPreferencesToggleAppsKey            : _toggleApps,
+      SDPreferencesDefaultsExistKey         : @YES,
+      SDPreferencesHideShowWhenSwitchingKey : @YES} enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+
+        objc_msgSend( NSUSERDEFS,
+                     NSSelectorFromString([obj isKindOfClass:NSNumber.class] ? @"setBool:forKey:" : @"setObject:forKey:"),
+                     obj,key);
+      }];
 }
 
 #pragma mark - Preferences Window callback methods
 
 - (void)preferencesDidChangeValue:(id)value forKey:(NSString *)key {
-    if ([key isEqualToString:SDPreferencesIconStyleKey]) {
-        [self _updateStatItemIconImage];
-    }
-}
 
-#pragma mark -
-
-- (void)dealloc {
-    [_toggleApps release];
-    [_preferencesWindow release];
-    [_statItem release];
-    
-    [super dealloc];
+  if ([key isEqualToString:SDPreferencesIconStyleKey]) [self _updateStatItemIconImage];
 }
 
 @end
