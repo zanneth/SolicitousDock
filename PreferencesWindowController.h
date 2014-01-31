@@ -15,15 +15,16 @@
    
 @interface PreferencesWindowController : NSWindowController<NSTableViewDelegate, NSTableViewDataSource>
 
-@property (nonatomic, assign) id<PreferencesWindowDelegate> delegate;
-@property (nonatomic, retain) IBOutlet NSButton *hideShowCheckbox;
-@property (nonatomic, retain) IBOutlet NSTableView *appsTableView;
-@property (nonatomic, retain) IBOutlet NSButton *removeRowButton;
-@property (nonatomic, retain) IBOutlet NSPopUpButton *iconStylePopUpButton;
+@property (nonatomic) IBOutlet      NSButton * hideShowCheckbox;
+@property (nonatomic) IBOutlet   NSTableView * appsTableView;
+@property (nonatomic) IBOutlet      NSButton * removeRowButton;
+@property (nonatomic) IBOutlet NSPopUpButton * iconStylePopUpButton;
+@property (nonatomic, unsafe_unretained)  id   <PreferencesWindowDelegate>
+                                               delegate;
 
-- (IBAction)hideShowCheckboxAction:(id)sender;
-- (IBAction)addRowButtonAction:(id)sender;
-- (IBAction)removeRowButtonAction:(id)sender;
-- (IBAction)menuIconStyleChangedAction:(id)sender;
+- (IBAction) hideShowCheckboxAction:    (id)sender;
+- (IBAction) addRowButtonAction:        (id)sender;
+- (IBAction) removeRowButtonAction:     (id)sender;
+- (IBAction) menuIconStyleChangedAction:(id)sender;
 
 @end

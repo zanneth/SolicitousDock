@@ -26,7 +26,7 @@ typedef NS_ENUM(NSUInteger, SDMenuIconStyle) {
 @property (nonatomic, assign) BOOL dockHidden;
 @property (nonatomic, assign) int toggleAppsOpenCount;
 
-@property (nonatomic, retain) NSMutableArray *toggleApps;
-@property (nonatomic, retain) PreferencesWindowController *preferencesWindow;
+@property (nonatomic, strong) NSMutableArray *toggleApps;
+@property (nonatomic, strong) PreferencesWindowController *preferencesWindow;
 
 @end
